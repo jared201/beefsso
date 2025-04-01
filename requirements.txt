@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+fastapi-users[sqlalchemy2,oauth2]
+pyotp
+auth
