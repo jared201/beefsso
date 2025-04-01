@@ -150,3 +150,16 @@ if __name__ == "__main__":
 ```
 
 This setup provides a basic structure for an SSO OAuth solution with MFA. You will need to implement the user model, user creation, and OTP sending logic according to your specific requirements.
+
+## Installation
+
+## Run the following command to install the required dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+## Run the application
+
+```bash   
+uvicorn server.server:app --reload
+```

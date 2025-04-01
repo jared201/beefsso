@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi_users import FastAPIUsers
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi_users.authentication import JWTStrategy
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, String
 from pydantic import BaseModel
 import pyotp
 
@@ -17,12 +17,15 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class User(Base):
-    # Define your user model here
-    pass
+    __tablename__ = "users"
+    id = Column(String, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    otp_secret = Column(String, nullable=False)
 
 class UserCreate(BaseModel):
-    # Define your user creation model here
-    pass
+    email: str
+    password: str
 
 class UserUpdate(UserCreate):
     pass
@@ -50,18 +53,17 @@ app = FastAPI()
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await fastapi_users.authenticate(form_data)
     if user:
-        # Generate OTP and send to user
         totp = pyotp.TOTP(user.otp_secret)
         # Send OTP to user via email/SMS
         return {"otp_required": True}
-    return {"error": "Invalid credentials"}
+    raise HTTPException(status_code=400, detail="Invalid credentials")
 
 @app.post("/auth/jwt/verify-otp")
 async def verify_otp(otp: str, user: User = Depends(fastapi_users.get_current_active_user)):
     totp = pyotp.TOTP(user.otp_secret)
     if totp.verify(otp):
         return await fastapi_users.get_auth_backend().get_login_response(user, None)
-    return {"error": "Invalid OTP"}
+    raise HTTPException(status_code=400, detail="Invalid OTP")
 
 fastapi_users.create_user_router()
 fastapi_users.create_auth_router(auth_backend)
